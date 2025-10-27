@@ -7,7 +7,7 @@ const getPhonemes = async ({ message }) => {
     const start = Date.now();
     console.log(`🎙️ Starting conversion for message ${message}`);
 
-    const backendDir = path.resolve("./apps/backend");
+    const backendDir = path.resolve("./");
     const audiosDir = path.join(backendDir, "audios");
     const rhubarbPath = path.join(
       backendDir,
@@ -22,7 +22,7 @@ const getPhonemes = async ({ message }) => {
     // 1️⃣ Convert MP3 → WAV
     await new Promise((resolve, reject) => {
       const cmd = `ffmpeg -y -i "${mp3File}" "${wavFile}"`;
-      exec(cmd, { cwd: backendDir }, (error, stdout, stderr) => {
+      exec(cmd, (error, stdout, stderr) => {
         if (error) return reject(stderr || error);
         console.log(`✅ MP3→WAV done for message ${message} in ${Date.now() - start}ms`);
         resolve();
@@ -34,7 +34,7 @@ const getPhonemes = async ({ message }) => {
       const cmd = `"${rhubarbPath}" -f json -o "${jsonFile}" "${wavFile}" -r phonetic`;
       console.log(`🎤 Running Rhubarb: ${cmd}`);
 
-      exec(cmd, { cwd: backendDir }, (error, stdout, stderr) => {
+      exec(cmd, (error, stdout, stderr) => {
         if (error) {
           console.error(`❌ Rhubarb failed:`, stderr || error.message);
           return reject(error);
