@@ -1,19 +1,15 @@
-import { Loader } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import { Leva } from "leva";
-import { Scenario } from "./components/Scenario";
-import { ChatInterface } from "./components/ChatInterface";
+import { Route, Routes } from "react-router-dom";
+import { MainScreen } from "./pages/MainScreen";
+import { InterviewScreen } from "./pages/InterviewScreen";
+import { DemoScreen } from "./pages/DemoScreen";
 
 function App() {
   return (
-    <>
-      <Loader />
-      <Leva collapsed hidden/>
-      <ChatInterface />
-      <Canvas shadows camera={{ position: [0, 0, 0], fov: 10 }}>
-        <Scenario />
-      </Canvas>
-    </>
+    <Routes>
+      <Route path="/" element={<MainScreen />} />
+      <Route path="/demo" element={<DemoScreen />} />
+      <Route path="/interview" element={<InterviewScreen />} />
+    </Routes>
   );
 }
 
