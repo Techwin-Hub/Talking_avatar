@@ -1,8 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 const backendUrl = "http://localhost:3000";
 
 const SpeechContext = createContext();
+
+const SILENCE_THRESHOLD = 2000; // 2 seconds of silence triggers send
+const VOICE_THRESHOLD = 0.01; // Average volume threshold to detect speech
 
 export const SpeechProvider = ({ children }) => {
   const [recording, setRecording] = useState(false);
@@ -11,17 +14,21 @@ export const SpeechProvider = ({ children }) => {
   const [message, setMessage] = useState();
   const [loading, setLoading] = useState(false);
 
-  let chunks = [];
-
-  const initiateRecording = () => {
-    chunks = [];
-  };
+  const audioContext = useRef(null);
+  const analyser = useRef(null);
+  const dataArray = useRef(null);
+  const source = useRef(null);
+  const silenceTimer = useRef(null);
+  const animationFrame = useRef(null);
+  const chunks = useRef([]);
 
   const onDataAvailable = (e) => {
-    chunks.push(e.data);
+    chunks.current.push(e.data);
   };
 
-  const sendAudioData = async (audioBlob) => {
+  const sendAudioData = async () => {
+    const audioBlob = new Blob(chunks.current, { type: "audio/webm" });
+    chunks.current = [];
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async function () {
@@ -41,44 +48,83 @@ export const SpeechProvider = ({ children }) => {
         console.error(error);
       } finally {
         setLoading(false);
+        // After sending, if still in recording mode, start the next recording
+        if (recording) {
+            mediaRecorder.start();
+        }
       }
     };
+  };
+
+  const setupMediaRecorder = (stream) => {
+    const newMediaRecorder = new MediaRecorder(stream);
+    newMediaRecorder.ondataavailable = onDataAvailable;
+    newMediaRecorder.onstop = sendAudioData;
+    setMediaRecorder(newMediaRecorder);
+
+    // Setup VAD
+    audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+    analyser.current = audioContext.current.createAnalyser();
+    analyser.current.fftSize = 256;
+    dataArray.current = new Uint8Array(analyser.current.frequencyBinCount);
+    source.current = audioContext.current.createMediaStreamSource(stream);
+    source.current.connect(analyser.current);
   };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       navigator.mediaDevices
         .getUserMedia({ audio: true })
-        .then((stream) => {
-          const newMediaRecorder = new MediaRecorder(stream);
-          newMediaRecorder.onstart = initiateRecording;
-          newMediaRecorder.ondataavailable = onDataAvailable;
-          newMediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(chunks, { type: "audio/webm" });
-            try {
-              await sendAudioData(audioBlob);
-            } catch (error) {
-              console.error(error);
-              alert(error.message);
-            }
-          };
-          setMediaRecorder(newMediaRecorder);
-        })
+        .then(setupMediaRecorder)
         .catch((err) => console.error("Error accessing microphone:", err));
+    }
+    return () => {
+        if (animationFrame.current) {
+            cancelAnimationFrame(animationFrame.current);
+        }
     }
   }, []);
 
+  const VAD = () => {
+    analyser.current.getByteFrequencyData(dataArray.current);
+    const average = dataArray.current.reduce((a, b) => a + b) / dataArray.current.length / 128.0;
+
+    if (average > VOICE_THRESHOLD) {
+      clearTimeout(silenceTimer.current);
+    } else {
+      if (!silenceTimer.current) {
+        silenceTimer.current = setTimeout(() => {
+          if (mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+          }
+          silenceTimer.current = null;
+        }, SILENCE_THRESHOLD);
+      }
+    }
+    animationFrame.current = requestAnimationFrame(VAD);
+  };
+
   const startRecording = () => {
     if (mediaRecorder) {
+      chunks.current = [];
       mediaRecorder.start();
       setRecording(true);
+      animationFrame.current = requestAnimationFrame(VAD);
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorder) {
-      mediaRecorder.stop();
+      if (mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+      }
       setRecording(false);
+      if (animationFrame.current) {
+          cancelAnimationFrame(animationFrame.current)
+      }
+      if (silenceTimer.current) {
+        clearTimeout(silenceTimer.current)
+      }
     }
   };
 

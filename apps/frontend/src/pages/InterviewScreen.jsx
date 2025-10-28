@@ -4,7 +4,6 @@ import { Scenario } from "../components/Scenario";
 import { useSpeech } from "../hooks/useSpeech";
 
 export const InterviewScreen = () => {
-  const [micOn, setMicOn] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
   const videoRef = useRef(null);
   const { startRecording, stopRecording, recording } = useSpeech();
@@ -39,12 +38,11 @@ export const InterviewScreen = () => {
   }, []);
 
   const toggleMic = () => {
-    if (micOn) {
+    if (recording) {
       stopRecording();
     } else {
       startRecording();
     }
-    setMicOn(!micOn);
   };
 
   const toggleCamera = () => {
