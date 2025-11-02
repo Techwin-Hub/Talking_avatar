@@ -58,8 +58,6 @@ export const SpeechProvider = ({ children }) => {
 
   const setupMediaRecorder = (stream) => {
     const newMediaRecorder = new MediaRecorder(stream);
-    newMediaRecorder.ondataavailable = onDataAvailable;
-    newMediaRecorder.onstop = sendAudioData;
     setMediaRecorder(newMediaRecorder);
 
     // Setup VAD
@@ -70,6 +68,13 @@ export const SpeechProvider = ({ children }) => {
     source.current = audioContext.current.createMediaStreamSource(stream);
     source.current.connect(analyser.current);
   };
+
+  useEffect(() => {
+    if (mediaRecorder) {
+      mediaRecorder.ondataavailable = onDataAvailable;
+      mediaRecorder.onstop = sendAudioData;
+    }
+  }, [mediaRecorder]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
