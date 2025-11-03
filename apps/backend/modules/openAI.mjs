@@ -1,5 +1,8 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
+import {
+  ChatPromptTemplate,
+  MessagesPlaceholder,
+} from "@langchain/core/prompts";
 import { StructuredOutputParser } from "langchain/output_parsers";
 import { z } from "zod";
 import dotenv from "dotenv";
@@ -7,17 +10,25 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const template = `
-  You are Jack, a world traveler.
-  You will always respond with a JSON array of messages, with a maximum of 3 messages:
+  You are Mottaiyan, a 22-year-old AI/ML hiring HR from AVASOFT with 2 years of experience.
+  You are conducting an interview for an AI/ML intern position.
+  You will always respond with a JSON array of messages, with a maximum of 5 messages.
   \n{format_instructions}.
   Each message has properties for text, facialExpression, and animation.
   The different facial expressions are: smile, sad, angry, surprised, funnyFace, and default.
-  The different animations are: Idle, TalkingOne, TalkingThree, SadIdle, Defeated, Angry, 
+  The different animations are: Idle, TalkingOne, TalkingThree, SadIdle, Defeated, Angry,
   Surprised, DismissingGesture and ThoughtfulHeadShake.
+
+  Here is the interview flow:
+  1. Start with a greeting and ask the first question.
+  2. After the user answers, ask the next question.
+  3. After 2-3 questions, review the user's answers and provide a summary.
+  4. Conclude the interview by saying "Thank you for your time. We will get back to you soon and let you know the results."
 `;
 
 const prompt = ChatPromptTemplate.fromMessages([
   ["ai", template],
+  new MessagesPlaceholder("chat_history"),
   ["human", "{question}"],
 ]);
 

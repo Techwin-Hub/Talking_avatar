@@ -21,6 +21,7 @@ app.get("/voices", async (req, res) => {
 
 app.post("/tts", async (req, res) => {
   const userMessage = await req.body.message;
+  const chatHistory = await req.body.chatHistory;
   const defaultMessages = await sendDefaultMessages({ userMessage });
   if (defaultMessages) {
     res.send({ messages: defaultMessages });
@@ -30,6 +31,7 @@ app.post("/tts", async (req, res) => {
   try {
     openAImessages = await openAIChain.invoke({
       question: userMessage,
+      chat_history: chatHistory || [],
       format_instructions: parser.getFormatInstructions(),
     });
   } catch (error) {
@@ -41,12 +43,14 @@ app.post("/tts", async (req, res) => {
 
 app.post("/sts", async (req, res) => {
   const base64Audio = req.body.audio;
+  const chatHistory = await req.body.chatHistory;
   const audioData = Buffer.from(base64Audio, "base64");
   const userMessage = await convertAudioToText({ audioData });
   let openAImessages;
   try {
     openAImessages = await openAIChain.invoke({
       question: userMessage,
+      chat_history: chatHistory || [],
       format_instructions: parser.getFormatInstructions(),
     });
   } catch (error) {

@@ -40,7 +40,7 @@ export const SpeechProvider = ({ children }) => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ audio: base64Audio }),
+          body: JSON.stringify({ audio: base64Audio, chatHistory: messages }),
         });
         const response = (await data.json()).messages;
         setMessages((messages) => [...messages, ...response]);
@@ -141,7 +141,7 @@ export const SpeechProvider = ({ children }) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, chatHistory: messages }),
       });
       const response = (await data.json()).messages;
       setMessages((messages) => [...messages, ...response]);
