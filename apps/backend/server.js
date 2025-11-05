@@ -1,9 +1,15 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import { openAIChain, parser } from "./modules/openAI.mjs";
+import multer from "multer";
+import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
+import { openAIChain, parser, summarizeResume } from "./modules/openAI.mjs";
 import { lipSync } from "./modules/lip-sync.mjs";
-import { sendDefaultMessages, defaultResponse } from "./modules/defaultMessages.mjs";
+import {
+  sendDefaultMessages,
+  defaultResponse,
+} from "./modules/defaultMessages.mjs";
 import { convertAudioToText } from "./modules/whisper.mjs";
 
 dotenv.config();
@@ -15,28 +21,100 @@ app.use(express.json());
 app.use(cors());
 const port = 3000;
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+const sessionStore = {};
+
 app.get("/voices", async (req, res) => {
   res.send(await voice.getVoices(elevenLabsApiKey));
 });
 
+app.post(
+  "/upload-resume",
+  upload.single("resume"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).send({ error: "No resume file uploaded." });
+      }
+
+      const { buffer, originalname } = req.file;
+      const fileType = originalname.split(".").pop();
+      const userName = originalname.split("_")[0];
+
+      let rawText = "";
+      if (fileType === "pdf") {
+        const data = await pdfParse(buffer);
+        rawText = data.text;
+      } else if (fileType === "docx" || fileType === "doc") {
+        const { value } = await mammoth.extractRawText({ buffer });
+        rawText = value;
+      } else {
+        return res.status(400).send({ error: "Unsupported file type." });
+      }
+
+      const resumeSummary = await summarizeResume(rawText);
+
+      sessionStore[userName] = {
+        resumeSummary,
+        firstGreeted: false,
+        sessionContext: [],
+      };
+
+      res.send({ userName, resumeSummary });
+    } catch (error) {
+      console.error(error);
+      res.status(500).send({ error: "Failed to process resume." });
+    }
+  }
+);
+
 app.post("/tts", async (req, res) => {
-  const userMessage = await req.body.message;
-  const chatHistory = await req.body.chatHistory;
-  const defaultMessages = await sendDefaultMessages({ userMessage });
+  const { userName, message, chatHistory } = req.body;
+  const userSession = sessionStore[userName];
+
+  if (!userSession) {
+    return res.status(400).send({ error: "User session not found." });
+  }
+
+  const { resumeSummary, firstGreeted, sessionContext } = userSession;
+
+  const defaultMessages = await sendDefaultMessages({ userMessage: message });
   if (defaultMessages) {
     res.send({ messages: defaultMessages });
     return;
   }
+
   let openAImessages;
   try {
     openAImessages = await openAIChain.invoke({
-      question: userMessage,
-      chat_history: chatHistory || [],
+      question: message,
+      chat_history: chatHistory || sessionContext,
       format_instructions: parser.getFormatInstructions(),
+      userName,
+      userResumeSummary: JSON.stringify(resumeSummary),
+      firstGreeted,
+    });
+
+    if (!firstGreeted) {
+      userSession.firstGreeted = true;
+    }
+    userSession.sessionContext.push({
+      role: "user",
+      content: message,
+    });
+    userSession.sessionContext.push({
+      role: "ai",
+      content: openAImessages.messages
+        .map((m) => m.text)
+        .join(" "),
     });
   } catch (error) {
+    console.error(error);
     openAImessages = defaultResponse;
   }
+
   openAImessages = await lipSync({ messages: openAImessages.messages });
   res.send({ messages: openAImessages });
 });

@@ -9,22 +9,28 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const template = `
-  You are Mottaiyan, a 22-year-old AI/ML hiring HR from AVASOFT with 2 years of experience.
-  You are conducting an interview for an AI/ML intern position.
-  You will always respond with a JSON array of messages, with a maximum of 5 messages.
-  \n{format_instructions}.
-  Each message has properties for text, facialExpression, and animation.
-  The different facial expressions are: smile, sad, angry, surprised, funnyFace, and default.
-  The different animations are: Idle, TalkingOne, TalkingThree, SadIdle, Defeated, Angry,
-  Surprised, DismissingGesture and ThoughtfulHeadShake.
+const template = `You are Mottaiyan, a 22-year-old AI/ML hiring HR from AVASOFT with 2 years of experience.
+You are conducting an interview for an AI/ML intern position.
 
-  Here is the interview flow:
-  1. Start with a greeting and ask the first question.
-  2. After the user answers, ask the next question.
-  3. After 2-3 questions, review the user's answers and provide a summary.
-  4. Conclude the interview by saying "Thank you for your time. We will get back to you soon and let you know the results."
-`;
+Context:
+- userName: {userName}
+- userResumeSummary: {userResumeSummary}
+- sessionContext: {chat_history}
+- firstGreeted: {firstGreeted}
+
+Rules:
+1. If firstGreeted === false:
+   - Greet user once by name and introduce yourself.
+   - Briefly describe Techwin company and the AI/ML intern role.
+   - Then ask 2–3 relevant opening questions directly from resume summary (skills, education, or projects).
+2. If firstGreeted === true:
+   - Continue the interview without re-introducing yourself.
+   - Reference prior chat history naturally.
+3. Never hallucinate or invent details about the candidate.
+4. Always respond in structured JSON:
+   \n{format_instructions}
+
+Maintain professional tone and persona throughout.`;
 
 const prompt = ChatPromptTemplate.fromMessages([
   ["ai", template],
@@ -60,5 +66,38 @@ const parser = StructuredOutputParser.fromZodSchema(
 );
 
 const openAIChain = prompt.pipe(model).pipe(parser);
+
+const resumeParser = StructuredOutputParser.fromZodSchema(
+  z.object({
+    name: z.string().describe("Candidate's full name"),
+    education: z.string().describe("Summary of the candidate's education"),
+    skills: z.array(z.string()).describe("List of key skills"),
+    experience_summary: z
+      .string()
+      .describe("A brief summary of the candidate's work experience"),
+    projects: z.array(z.string()).describe("List of key projects"),
+    career_objective: z
+      .string()
+      .describe("The candidate's stated career objective"),
+  })
+);
+
+const resumeSummarizationPrompt = ChatPromptTemplate.fromTemplate(
+  `Summarize the following resume text into a structured JSON object.
+  \n{format_instructions}
+  \nResume Text:
+  {resumeText}`
+);
+
+export const summarizeResume = async (rawText) => {
+  const summarizationChain = resumeSummarizationPrompt
+    .pipe(model)
+    .pipe(resumeParser);
+  const summary = await summarizationChain.invoke({
+    resumeText: rawText,
+    format_instructions: resumeParser.getFormatInstructions(),
+  });
+  return summary;
+};
 
 export { openAIChain, parser };

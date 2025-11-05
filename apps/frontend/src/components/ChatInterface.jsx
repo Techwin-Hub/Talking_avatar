@@ -1,14 +1,15 @@
 import { useRef } from "react";
 import { useSpeech } from "../hooks/useSpeech";
 
-export const ChatInterface = ({ hidden, ...props }) => {
+export const ChatInterface = ({ hidden, userName, ...props }) => {
   const input = useRef();
-  const { tts, loading, message, startRecording, stopRecording, recording } = useSpeech();
+  const { tts, loading, message, startRecording, stopRecording, recording } =
+    useSpeech();
 
   const sendMessage = () => {
     const text = input.current.value;
     if (!loading && !message) {
-      tts(text);
+      tts({ message: text, userName });
       input.current.value = "";
     }
   };
