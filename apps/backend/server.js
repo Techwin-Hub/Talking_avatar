@@ -115,8 +115,13 @@ app.post("/tts", async (req, res) => {
     openAImessages = defaultResponse;
   }
 
-  openAImessages = await lipSync({ messages: openAImessages.messages });
-  res.send({ messages: openAImessages });
+  try {
+    const messages = await lipSync({ messages: openAImessages.messages });
+    res.send({ messages });
+  } catch (error) {
+    console.error("Error in lipSync:", error);
+    res.send({ messages: defaultResponse.messages });
+  }
 });
 
 app.post("/sts", async (req, res) => {
