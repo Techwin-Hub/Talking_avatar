@@ -14,8 +14,6 @@ import { convertAudioToText } from "./modules/whisper.mjs";
 
 dotenv.config();
 
-const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
-
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -25,10 +23,6 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 const sessionStore = {};
-
-app.get("/voices", async (req, res) => {
-  res.send(await voice.getVoices(elevenLabsApiKey));
-});
 
 app.post(
   "/upload-resume",

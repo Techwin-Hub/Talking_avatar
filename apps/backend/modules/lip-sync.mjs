@@ -1,13 +1,13 @@
-import { convertTextToSpeech } from "./elevenLabs.mjs";
+import { convertTextToSpeech } from "./convertTextToSpeech.mjs";
 import { getPhonemes } from "./rhubarbLipSync.mjs";
 import { readJsonTranscript, audioFileToBase64 } from "../utils/files.mjs";
 
 const lipSync = async ({ messages }) => {
   const messagePromises = messages.map(async (message, index) => {
-    const fileName = `audios/message_${index}.mp3`;
+    const fileName = `audios/message_${index}.wav`;
     try {
       await convertTextToSpeech({ text: message.text, fileName });
-      await getPhonemes({ message: index });
+      await getPhonemes({ audioFile: fileName });
       message.audio = await audioFileToBase64({ fileName });
       message.lipsync = await readJsonTranscript({
         fileName: `audios/message_${index}.json`,

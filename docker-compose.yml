@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  node-backend:
+    build:
+      context: ./apps/backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/backend:/app
+      # This will exclude the node_modules folder from being overwritten by the volume
+      - /app/node_modules
+    depends_on:
+      - coqui-tts
+    environment:
+      - NODE_ENV=development
+
+  coqui-tts:
+    build:
+      context: ./apps/tts_service
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./apps/tts_service:/app
