@@ -13,6 +13,7 @@ services:
       - coqui-tts
     environment:
       - NODE_ENV=development
+      - TTS_SERVICE_URL=http://coqui-tts:5002
 
   coqui-tts:
     build:
