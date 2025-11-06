@@ -5,6 +5,13 @@
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+apps/tts_service/venv/
+venv/
+env/
+*/venv/
+__pycache__/
+*.py[cod]
+*.pyo
 
 # testing
 /coverage
