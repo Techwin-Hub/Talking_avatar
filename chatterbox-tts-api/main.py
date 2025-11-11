@@ -6,6 +6,8 @@ This is the main entry point for the application.
 It imports the FastAPI app from the organized app package.
 """
 
+import os
+os.environ['USE_MULTILINGUAL_MODEL'] = 'false'
 import uvicorn
 from app.main import app
 from app.config import Config
