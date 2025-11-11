@@ -120,7 +120,7 @@ app.post("/tts", async (req, res) => {
     res.send({ messages });
   } catch (error) {
     console.error("Error in lipSync:", error);
-    res.send({ messages: defaultResponse.messages });
+    res.status(500).send({ error: "Failed to process text-to-speech." });
   }
 });
 

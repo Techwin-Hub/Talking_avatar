@@ -143,6 +143,11 @@ export const SpeechProvider = ({ children }) => {
         },
         body: JSON.stringify({ message, chatHistory: messages, userName }),
       });
+      if (!data.ok) {
+        const errorText = await data.text();
+        console.error("TTS request failed:", errorText);
+        return;
+      }
       const response = (await data.json()).messages;
       setMessages((messages) => [...messages, ...response]);
     } catch (error) {
