@@ -72,10 +72,17 @@ app.post(
 
 app.post("/tts", async (req, res) => {
   const { userName, message, chatHistory } = req.body;
-  const userSession = sessionStore[userName];
+  let userSession = sessionStore[userName];
 
+  // If no session exists, create a default one to allow conversation without resume upload
   if (!userSession) {
-    return res.status(400).send({ error: "User session not found." });
+    console.log(`No session found for '${userName}'. Creating a default session.`);
+    sessionStore[userName] = {
+      resumeSummary: "No resume summary available.",
+      firstGreeted: false,
+      sessionContext: [],
+    };
+    userSession = sessionStore[userName];
   }
 
   const { resumeSummary, firstGreeted, sessionContext } = userSession;

@@ -1,8 +1,10 @@
 import axios from "axios";
 import fs from "fs";
 import FormData from "form-data";
+import path from "path";
+
 const chatterBoxUrl = "http://127.0.0.1:4123/v1/audio/speech/upload";
-const voiceSamplePath = "C:/Users/sethu/Downloads/Talking_avatar/chatterbox-tts-api/voice-sample.mp3";
+const voiceSamplePath = path.join(process.cwd(), "../../chatterbox-tts-api/voice-sample.mp3");
 
 async function convertTextToSpeech({ text, fileName }) {
   try {
