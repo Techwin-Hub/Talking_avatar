@@ -143,17 +143,20 @@ app.post("/sts", async (req, res) => {
       chat_history: chatHistory || [],
       format_instructions: parser.getFormatInstructions(),
     });
+    // If the response from OpenAI is invalid, fall back to the default.
+    if (!openAImessages || !openAImessages.messages) {
+      console.error("OpenAI returned an invalid or empty response, using default.");
+      openAImessages = defaultResponse;
+    }
   } catch (error) {
+    console.error("Error invoking OpenAI chain, using default response:", error);
     openAImessages = defaultResponse;
   }
+
   try {
-    if (openAImessages && openAImessages.messages) {
-      const messages = await lipSync({ messages: openAImessages.messages });
-      res.send({ messages });
-    } else {
-      console.error("OpenAI did not return messages, sending default response.");
-      res.send({ messages: defaultResponse.messages });
-    }
+    // Now, all paths lead to lipSync with a valid message structure.
+    const messages = await lipSync({ messages: openAImessages.messages });
+    res.send({ messages });
   } catch (error) {
     console.error("Error in lipSync after STS:", error);
     res.status(500).send({ error: "Failed to process speech-to-text audio." });
