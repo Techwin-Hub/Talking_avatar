@@ -19,15 +19,26 @@ const getPhonemes = async ({ message }) => {
     const wavFile = path.join(audiosDir, `message_${message}.wav`);
     const jsonFile = path.join(audiosDir, `message_${message}.json`);
 
-    // 1️⃣ Convert MP3 → WAV
-    await new Promise((resolve, reject) => {
-      const cmd = `ffmpeg -y -i "${mp3File}" "${wavFile}"`;
-      exec(cmd, (error, stdout, stderr) => {
-        if (error) return reject(stderr || error);
-        console.log(`✅ MP3→WAV done for message ${message} in ${Date.now() - start}ms`);
-        resolve();
-      });
-    });
+    // 1️⃣ Convert MP3 → WAV if necessary
+    try {
+      await fs.access(wavFile);
+      console.log(`✅ WAV file already exists for message ${message}. Skipping conversion.`);
+    } catch {
+      try {
+        await fs.access(mp3File);
+        console.log(`Converting MP3 to WAV for message ${message}...`);
+        await new Promise((resolve, reject) => {
+          const cmd = `ffmpeg -y -i "${mp3File}" "${wavFile}"`;
+          exec(cmd, (error, stdout, stderr) => {
+            if (error) return reject(stderr || error);
+            console.log(`✅ MP3→WAV done for message ${message} in ${Date.now() - start}ms`);
+            resolve();
+          });
+        });
+      } catch (mp3Error) {
+        throw new Error(`Audio source file not found for message ${message}. Neither ${wavFile} nor ${mp3File} exists.`);
+      }
+    }
 
     // 2️⃣ Run Rhubarb
     await new Promise((resolve, reject) => {
