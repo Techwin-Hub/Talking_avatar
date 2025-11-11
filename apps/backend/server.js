@@ -146,8 +146,18 @@ app.post("/sts", async (req, res) => {
   } catch (error) {
     openAImessages = defaultResponse;
   }
-  openAImessages = await lipSync({ messages: openAImessages.messages });
-  res.send({ messages: openAImessages });
+  try {
+    if (openAImessages && openAImessages.messages) {
+      const messages = await lipSync({ messages: openAImessages.messages });
+      res.send({ messages });
+    } else {
+      console.error("OpenAI did not return messages, sending default response.");
+      res.send({ messages: defaultResponse.messages });
+    }
+  } catch (error) {
+    console.error("Error in lipSync after STS:", error);
+    res.status(500).send({ error: "Failed to process speech-to-text audio." });
+  }
 });
 
 app.listen(port, () => {
