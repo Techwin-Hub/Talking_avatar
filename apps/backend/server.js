@@ -4,7 +4,7 @@ import express from "express";
 import multer from "multer";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
-import { openAIChain, parser, summarizeResume } from "./modules/openAI.mjs";
+import { ollamaChain, parser, summarizeResume } from "./modules/ollama.mjs";
 import { lipSync } from "./modules/lip-sync.mjs";
 import {
   sendDefaultMessages,
@@ -13,8 +13,6 @@ import {
 import { convertAudioToText } from "./modules/whisper.mjs";
 
 dotenv.config();
-
-const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
 
 const app = express();
 app.use(express.json());
@@ -25,10 +23,6 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 const sessionStore = {};
-
-app.get("/voices", async (req, res) => {
-  res.send(await voice.getVoices(elevenLabsApiKey));
-});
 
 app.post(
   "/upload-resume",
@@ -95,7 +89,7 @@ app.post("/tts", async (req, res) => {
 
   let openAImessages;
   try {
-    openAImessages = await openAIChain.invoke({
+    openAImessages = await ollamaChain.invoke({
       question: message,
       chat_history: chatHistory || sessionContext,
       format_instructions: parser.getFormatInstructions(),
@@ -138,7 +132,7 @@ app.post("/sts", async (req, res) => {
   const userMessage = await convertAudioToText({ audioData });
   let openAImessages;
   try {
-    openAImessages = await openAIChain.invoke({
+    openAImessages = await ollamaChain.invoke({
       question: userMessage,
       chat_history: chatHistory || [],
       format_instructions: parser.getFormatInstructions(),
