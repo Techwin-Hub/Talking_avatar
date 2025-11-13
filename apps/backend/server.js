@@ -4,7 +4,7 @@ import express from "express";
 import multer from "multer";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
-import { openAIChain, parser, summarizeResume } from "./modules/openAI.mjs";
+import { ollamaChain, parser, summarizeResume } from "./modules/ollama.mjs";
 import { lipSync } from "./modules/lip-sync.mjs";
 import {
   sendDefaultMessages,
@@ -93,9 +93,9 @@ app.post("/tts", async (req, res) => {
     return;
   }
 
-  let openAImessages;
+  let ollamaMessages;
   try {
-    openAImessages = await openAIChain.invoke({
+    ollamaMessages = await ollamaChain.invoke({
       question: message,
       chat_history: chatHistory || sessionContext,
       format_instructions: parser.getFormatInstructions(),
@@ -113,17 +113,17 @@ app.post("/tts", async (req, res) => {
     });
     userSession.sessionContext.push({
       role: "ai",
-      content: openAImessages.messages
+      content: ollamaMessages.messages
         .map((m) => m.text)
         .join(" "),
     });
   } catch (error) {
     console.error(error);
-    openAImessages = defaultResponse;
+    ollamaMessages = defaultResponse;
   }
 
   try {
-    const messages = await lipSync({ messages: openAImessages.messages });
+    const messages = await lipSync({ messages: ollamaMessages.messages });
     res.send({ messages });
   } catch (error) {
     console.error("Error in lipSync:", error);
@@ -136,26 +136,26 @@ app.post("/sts", async (req, res) => {
   const chatHistory = await req.body.chatHistory;
   const audioData = Buffer.from(base64Audio, "base64");
   const userMessage = await convertAudioToText({ audioData });
-  let openAImessages;
+  let ollamaMessages;
   try {
-    openAImessages = await openAIChain.invoke({
+    ollamaMessages = await ollamaChain.invoke({
       question: userMessage,
       chat_history: chatHistory || [],
       format_instructions: parser.getFormatInstructions(),
     });
     // If the response from OpenAI is invalid, fall back to the default.
-    if (!openAImessages || !openAImessages.messages) {
+    if (!ollamaMessages || !ollamaMessages.messages) {
       console.error("OpenAI returned an invalid or empty response, using default.");
-      openAImessages = defaultResponse;
+      ollamaMessages = defaultResponse;
     }
   } catch (error) {
     console.error("Error invoking OpenAI chain, using default response:", error);
-    openAImessages = defaultResponse;
+    ollamaMessages = defaultResponse;
   }
 
   try {
     // Now, all paths lead to lipSync with a valid message structure.
-    const messages = await lipSync({ messages: openAImessages.messages });
+    const messages = await lipSync({ messages: ollamaMessages.messages });
     res.send({ messages });
   } catch (error) {
     console.error("Error in lipSync after STS:", error);

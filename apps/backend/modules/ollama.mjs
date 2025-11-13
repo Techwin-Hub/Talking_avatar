@@ -1,4 +1,4 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatOllama } from "@langchain/community/chat_models/ollama";
 import {
   ChatPromptTemplate,
   MessagesPlaceholder,
@@ -38,9 +38,8 @@ const prompt = ChatPromptTemplate.fromMessages([
   ["human", "{question}"],
 ]);
 
-const model = new ChatOpenAI({
-  openAIApiKey: process.env.OPENAI_API_KEY || "-",
-  modelName: process.env.OPENAI_MODEL || "davinci",
+const model = new ChatOllama({
+  model: "phi3",
   temperature: 0.2,
 });
 
@@ -65,7 +64,7 @@ const parser = StructuredOutputParser.fromZodSchema(
   })
 );
 
-const openAIChain = prompt.pipe(model).pipe(parser);
+const ollamaChain = prompt.pipe(model).pipe(parser);
 
 const resumeParser = StructuredOutputParser.fromZodSchema(
   z.object({
@@ -100,4 +99,4 @@ export const summarizeResume = async (rawText) => {
   return summary;
 };
 
-export { openAIChain, parser };
+export { ollamaChain, parser };
