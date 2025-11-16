@@ -9,38 +9,19 @@ export const Malpractice = () => {
   const canvasRef = useRef(null);
   const [isWebcamOn, setIsWebcamOn] = useState(false);
   const [warning, setWarning] = useState(null);
+  const [net, setNet] = useState(null);
 
-  const runCoco = async () => {
-    const net = await cocossd.load();
-    setInterval(() => {
-      detect(net);
-    }, 10);
-  };
-
-  const detect = async (net) => {
-    if (
-      isWebcamOn &&
-      typeof webcamRef.current !== "undefined" &&
-      webcamRef.current !== null &&
-      webcamRef.current.video.readyState === 4
-    ) {
-      const video = webcamRef.current.video;
-      const videoWidth = webcamRef.current.video.videoWidth;
-      const videoHeight = webcamRef.current.video.videoHeight;
-
-      webcamRef.current.video.width = videoWidth;
-      webcamRef.current.video.height = videoHeight;
-
-      canvasRef.current.width = videoWidth;
-      canvasRef.current.height = videoHeight;
-
-      const obj = await net.detect(video);
-      const ctx = canvasRef.current.getContext("2d");
-      drawRect(obj, ctx);
-    }
-  };
+  // Load the COCO-SSD model once when the component mounts.
+  useEffect(() => {
+    const loadNet = async () => {
+      const loadedNet = await cocossd.load();
+      setNet(loadedNet);
+    };
+    loadNet();
+  }, []);
 
   const drawRect = (detections, ctx) => {
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     let personCount = 0;
     let mobilePhoneDetected = false;
 
@@ -61,7 +42,7 @@ export const Malpractice = () => {
       ctx.fillStyle = color;
 
       ctx.beginPath();
-      ctx.fillText(text, x, y);
+      ctx.fillText(text, x, y > 10 ? y - 5 : 10);
       ctx.rect(x, y, width, height);
       ctx.stroke();
     });
@@ -75,9 +56,43 @@ export const Malpractice = () => {
     }
   };
 
+  // The main detection logic
+  const detect = async (net) => {
+    if (
+      webcamRef.current &&
+      webcamRef.current.video.readyState === 4
+    ) {
+      const video = webcamRef.current.video;
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+
+      webcamRef.current.video.width = videoWidth;
+      webcamRef.current.video.height = videoHeight;
+
+      canvasRef.current.width = videoWidth;
+      canvasRef.current.height = videoHeight;
+
+      const obj = await net.detect(video);
+      const ctx = canvasRef.current.getContext("2d");
+      drawRect(obj, ctx);
+    }
+  };
+
+  // This effect runs the detection loop when the webcam is on and the model is loaded.
   useEffect(() => {
-    runCoco();
-  }, []);
+    let intervalId;
+    if (isWebcamOn && net) {
+      intervalId = setInterval(() => {
+        detect(net);
+      }, 100); // Run detection every 100ms
+    }
+    // Cleanup function to clear the interval when the component unmounts or dependencies change.
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isWebcamOn, net]);
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
@@ -100,7 +115,7 @@ export const Malpractice = () => {
               left: 0,
               right: 0,
               textAlign: "center",
-              zIndex: 9,
+              zIndex: 8,
               width: 640,
               height: 480,
             }}
@@ -114,7 +129,7 @@ export const Malpractice = () => {
               left: 0,
               right: 0,
               textAlign: "center",
-              zIndex: 8,
+              zIndex: 9,
               width: 640,
               height: 480,
             }}
