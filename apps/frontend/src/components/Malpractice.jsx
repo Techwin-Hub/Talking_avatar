@@ -89,7 +89,7 @@ export const Malpractice = () => {
         {isWebcamOn ? "Turn Off Webcam" : "Turn On Webcam"}
       </button>
       {isWebcamOn && (
-        <div className="relative">
+        <div className="relative w-[640px] h-[480px]">
           <Webcam
             ref={webcamRef}
             muted={true}
